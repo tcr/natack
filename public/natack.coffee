@@ -2,6 +2,7 @@
 # ------------
 
 Array.prototype.shuffle = -> this.sort -> 0.5 - Math.random()
+Array.prototype.random = -> @[(Math.random()*@length)|0]
 
 # Constants
 # ---------
@@ -26,13 +27,13 @@ FOREST = 6
 WHEAT = 7
 
 TILECOLORS =
-	1: 'blue'
-	2: 'tan'
-	3: '#0f0'
+	1: '#00a'
+	2: '#EBC79E'
+	3: '#5a0'
 	4: '#A52A2A'
-	5: 'lightgray'
-	6: 'darkgreen'
-	7: 'gold'
+	5: '#aaa'
+	6: '#060'
+	7: '#d90'
 
 TILESET = [
 	PLAIN, PLAIN, PLAIN, PLAIN
@@ -43,6 +44,8 @@ TILESET = [
 	DESERT
 ]
 ROLLS = [11, 12, 9, 4, 6, 5, 10, 3, 11, 4, 8, 8, 10, 9, 3, 5, 2, 6]
+
+PLAYERCOLORS = ['black', '#f00', '#00f', '#fff', '#fa0', '#0f0', '#AA6600']
 
 ###
 
@@ -240,7 +243,7 @@ class Board extends HexMap
 		# Reset hit map.
 		@cmap.reset()
 		# Reset canvas.
-		@ctx.fillStyle = 'cyan'
+		@ctx.fillStyle = '#aef'
 		@ctx.fillRect 0, 0, BOARDWIDTH, BOARDHEIGHT
 		
 		@ctx.save()
@@ -280,7 +283,10 @@ class Board extends HexMap
 		if edge.road
 			@ctx.save()
 			tr2.apply @ctx
-			@ctx.fillStyle = 'black'
+			@ctx.fillStyle = PLAYERCOLORS[edge.road]
+			@ctx.strokeStyle = 'black'
+			@ctx.lineWidth = 2
+			@ctx.strokeRect -3, ROADBUFFER, 6, TILERADII - ROADBUFFER*2
 			@ctx.fillRect -3, ROADBUFFER, 6, TILERADII - ROADBUFFER*2
 			@ctx.restore()
 
@@ -288,7 +294,7 @@ class Board extends HexMap
 		[x1, y1] = tr2.transformPoint -3 - HITBUFFER, 0
 		[x2, y2] = tr2.transformPoint -3 + 6 + HITBUFFER, TILERADII
 		@cmap.polygon [[x1, y1], [x2, y1], [x2, y2], [x1, y2]], =>
-			edge.road = 1
+			edge.road = [1..6].random()
 			@render()
 	
 	_renderHouse: (tr, hex, v) ->
@@ -307,16 +313,19 @@ class Board extends HexMap
 		if vertex.house
 			@ctx.save()
 			tr2.apply @ctx
-			@ctx.fillStyle = 'black'
+			@ctx.fillStyle = PLAYERCOLORS[vertex.house]
+			@ctx.strokeStyle = 'black'
+			@ctx.lineWidth = 2
 			@ctx.beginPath()
 			@ctx.arc TILERADII, 0, 5, 0, Math.PI*2, true
 			@ctx.closePath()
 			@ctx.fill()
+			@ctx.stroke()
 			@ctx.restore()
 
 		# Circular hit map.
 		@cmap.circle (tr2.transformPoint TILERADII, 0)..., 5+HITBUFFER, =>
-			vertex.house = 1
+			vertex.house = [1..6].random()
 			@render()
 	
 	_renderHex: (tr, hex) =>
@@ -337,7 +346,8 @@ class Board extends HexMap
 		@ctx.save()
 		tr2.apply @ctx
 		@ctx.fillStyle = color
-		@ctx.strokeStyle = '1px solid black'
+		@ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)'
+		@ctx.lineWidth = 1
 		@ctx.beginPath()
 		@ctx.moveTo TILERADII, 0
 		for i in [0...6]

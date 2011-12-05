@@ -1,5 +1,5 @@
 (function() {
-  var BOARDHEIGHT, BOARDWIDTH, BRICK, Board, BoardHouse, BoardRoad, BoardTile, ClickMap, DESERT, Edge, FOREST, HITBUFFER, Hex, HexMap, MOUNTAIN, NOTHING, PLAIN, ROADBUFFER, ROLLS, TILECOLORS, TILERADII, TILESET, Vertex, WATER, WHEAT;
+  var BOARDHEIGHT, BOARDWIDTH, BRICK, Board, BoardHouse, BoardRoad, BoardTile, ClickMap, DESERT, Edge, FOREST, HITBUFFER, Hex, HexMap, MOUNTAIN, NOTHING, PLAIN, PLAYERCOLORS, ROADBUFFER, ROLLS, TILECOLORS, TILERADII, TILESET, Vertex, WATER, WHEAT;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
     for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
     function ctor() { this.constructor = child; }
@@ -12,6 +12,9 @@
     return this.sort(function() {
       return 0.5 - Math.random();
     });
+  };
+  Array.prototype.random = function() {
+    return this[(Math.random() * this.length) | 0];
   };
   BOARDWIDTH = BOARDHEIGHT = 520;
   TILERADII = 40;
@@ -26,16 +29,17 @@
   FOREST = 6;
   WHEAT = 7;
   TILECOLORS = {
-    1: 'blue',
-    2: 'tan',
-    3: '#0f0',
+    1: '#00a',
+    2: '#EBC79E',
+    3: '#5a0',
     4: '#A52A2A',
-    5: 'lightgray',
-    6: 'darkgreen',
-    7: 'gold'
+    5: '#aaa',
+    6: '#060',
+    7: '#d90'
   };
   TILESET = [PLAIN, PLAIN, PLAIN, PLAIN, BRICK, BRICK, BRICK, FOREST, FOREST, FOREST, FOREST, WHEAT, WHEAT, WHEAT, WHEAT, MOUNTAIN, MOUNTAIN, MOUNTAIN, DESERT];
   ROLLS = [11, 12, 9, 4, 6, 5, 10, 3, 11, 4, 8, 8, 10, 9, 3, 5, 2, 6];
+  PLAYERCOLORS = ['black', '#f00', '#00f', '#fff', '#fa0', '#0f0', '#AA6600'];
   /*
   
   Hex map model
@@ -279,7 +283,7 @@
     Board.prototype.render = function() {
       var e, i, j, tile, tr, v, _i, _j, _len, _len2, _ref, _ref2, _ref3, _ref4;
       this.cmap.reset();
-      this.ctx.fillStyle = 'cyan';
+      this.ctx.fillStyle = '#aef';
       this.ctx.fillRect(0, 0, BOARDWIDTH, BOARDHEIGHT);
       this.ctx.save();
       tr = new Transform();
@@ -320,14 +324,17 @@
       if (edge.road) {
         this.ctx.save();
         tr2.apply(this.ctx);
-        this.ctx.fillStyle = 'black';
+        this.ctx.fillStyle = PLAYERCOLORS[edge.road];
+        this.ctx.strokeStyle = 'black';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(-3, ROADBUFFER, 6, TILERADII - ROADBUFFER * 2);
         this.ctx.fillRect(-3, ROADBUFFER, 6, TILERADII - ROADBUFFER * 2);
         this.ctx.restore();
       }
       _ref = tr2.transformPoint(-3 - HITBUFFER, 0), x1 = _ref[0], y1 = _ref[1];
       _ref2 = tr2.transformPoint(-3 + 6 + HITBUFFER, TILERADII), x2 = _ref2[0], y2 = _ref2[1];
       return this.cmap.polygon([[x1, y1], [x2, y1], [x2, y2], [x1, y2]], __bind(function() {
-        edge.road = 1;
+        edge.road = [1, 2, 3, 4, 5, 6].random();
         return this.render();
       }, this));
     };
@@ -343,15 +350,18 @@
       if (vertex.house) {
         this.ctx.save();
         tr2.apply(this.ctx);
-        this.ctx.fillStyle = 'black';
+        this.ctx.fillStyle = PLAYERCOLORS[vertex.house];
+        this.ctx.strokeStyle = 'black';
+        this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         this.ctx.arc(TILERADII, 0, 5, 0, Math.PI * 2, true);
         this.ctx.closePath();
         this.ctx.fill();
+        this.ctx.stroke();
         this.ctx.restore();
       }
       return (_ref = this.cmap).circle.apply(_ref, __slice.call(tr2.transformPoint(TILERADII, 0)).concat([5 + HITBUFFER], [__bind(function() {
-        vertex.house = 1;
+        vertex.house = [1, 2, 3, 4, 5, 6].random();
         return this.render();
       }, this)]));
     };
@@ -369,7 +379,8 @@
       this.ctx.save();
       tr2.apply(this.ctx);
       this.ctx.fillStyle = color;
-      this.ctx.strokeStyle = '1px solid black';
+      this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+      this.ctx.lineWidth = 1;
       this.ctx.beginPath();
       this.ctx.moveTo(TILERADII, 0);
       for (i = 0; i < 6; i++) {
