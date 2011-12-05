@@ -1,5 +1,5 @@
 (function() {
-  var BOARDHEIGHT, BOARDWIDTH, BRICK, Board, BoardTile, DESERT, Edge, FOREST, Hex, HexMap, MOUNTAIN, NOTHING, PLAIN, ROLLS, TILECOLORS, TILERADII, TILESET, Vertex, WATER, WHEAT;
+  var BOARDHEIGHT, BOARDWIDTH, BRICK, Board, BoardHouse, BoardRoad, BoardTile, ClickMap, DESERT, Edge, FOREST, HITBUFFER, Hex, HexMap, MOUNTAIN, NOTHING, PLAIN, ROADBUFFER, ROLLS, TILECOLORS, TILERADII, TILESET, Vertex, WATER, WHEAT;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
     for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
     function ctor() { this.constructor = child; }
@@ -7,14 +7,16 @@
     child.prototype = new ctor;
     child.__super__ = parent.prototype;
     return child;
-  }, __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+  }, __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; }, __slice = Array.prototype.slice;
   Array.prototype.shuffle = function() {
     return this.sort(function() {
       return 0.5 - Math.random();
     });
   };
-  BOARDWIDTH = BOARDHEIGHT = 500;
+  BOARDWIDTH = BOARDHEIGHT = 520;
   TILERADII = 40;
+  ROADBUFFER = 8;
+  HITBUFFER = 3;
   NOTHING = 0;
   WATER = 1;
   DESERT = 2;
@@ -73,7 +75,13 @@
       this.y = y;
     }
     Edge.prototype.getEnds = function() {
-      return this.board.getEnds(this);
+      var x, y, _ref, _ref2, _ref3, _ref4;
+      x = this.x, y = this.y;
+      if (x % 2 === 0) {
+        return [(_ref = this.board.vertices[x / 2]) != null ? _ref[y] : void 0, (_ref2 = this.board.vertices[x / 2]) != null ? _ref2[y + 1] : void 0];
+      } else {
+        return [(_ref3 = this.board.vertices[(x - 1) / 2]) != null ? _ref3[y] : void 0, (_ref4 = this.board.vertices[(x + 1) / 2]) != null ? _ref4[y] : void 0];
+      }
     };
     return Edge;
   })();
@@ -84,10 +92,16 @@
       this.y = y;
     }
     Vertex.prototype.getEdges = function() {
-      return this.board.getEdges(this);
+      var x, y, _ref, _ref2, _ref3;
+      x = this.x, y = this.y;
+      return [(_ref = this.board.edges[x * 2]) != null ? _ref[y] : void 0, (_ref2 = this.board.edges[x * 2 + 1]) != null ? _ref2[y] : void 0, (_ref3 = this.board.edges[x * 2 - 1]) != null ? _ref3[y] : void 0];
     };
     Vertex.prototype.getHexes = function() {
-      return this.board.getHexes(this);
+      var x, xoffset, y, yoffset, _ref, _ref2, _ref3;
+      x = this.x, y = this.y;
+      xoffset = x % 2;
+      yoffset = y % 2;
+      return [(_ref = this.board.hexes[x - 1]) != null ? _ref[(y + xoffset) / 2 - 1] : void 0, (_ref2 = this.board.hexes[x - (1 - yoffset) * xoffset]) != null ? _ref2[(y - 1) / 2] : void 0, (_ref3 = this.board.hexes[x]) != null ? _ref3[(y - xoffset) / 2] : void 0];
     };
     return Vertex;
   })();
@@ -98,13 +112,26 @@
       this.y = y;
     }
     Hex.prototype.getNeighbors = function() {
-      return this.board.getNeighbors(this);
+      var offset, x, y, _ref, _ref10, _ref11, _ref12, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
+      x = this.x, y = this.y;
+      offset = x % 2 === 0 ? +1 : -1;
+      if (x % 2 === 0) {
+        return [(_ref = this.board.hexes[x]) != null ? _ref[y - 1] : void 0, (_ref2 = this.board.hexes[x + 1]) != null ? _ref2[y] : void 0, (_ref3 = this.board.hexes[x + 1]) != null ? _ref3[y + offset] : void 0, (_ref4 = this.board.hexes[x]) != null ? _ref4[y + 1] : void 0, (_ref5 = this.board.hexes[x - 1]) != null ? _ref5[y + offset] : void 0, (_ref6 = this.board.hexes[x - 1]) != null ? _ref6[y] : void 0];
+      } else {
+        return [(_ref7 = this.board.hexes[x]) != null ? _ref7[y - 1] : void 0, (_ref8 = this.board.hexes[x + 1]) != null ? _ref8[y + offset] : void 0, (_ref9 = this.board.hexes[x + 1]) != null ? _ref9[y] : void 0, (_ref10 = this.board.hexes[x]) != null ? _ref10[y + 1] : void 0, (_ref11 = this.board.hexes[x - 1]) != null ? _ref11[y] : void 0, (_ref12 = this.board.hexes[x - 1]) != null ? _ref12[y + offset] : void 0];
+      }
     };
     Hex.prototype.getVertices = function() {
-      return this.board.getVertices(this);
+      var offset, x, y, _ref, _ref2, _ref3, _ref4, _ref5, _ref6;
+      x = this.x, y = this.y;
+      offset = x % 2;
+      return [(_ref = this.board.vertices[x]) != null ? _ref[2 * y + offset] : void 0, (_ref2 = this.board.vertices[x + 1]) != null ? _ref2[2 * y + offset] : void 0, (_ref3 = this.board.vertices[x + 1]) != null ? _ref3[2 * y + 1 + offset] : void 0, (_ref4 = this.board.vertices[x + 1]) != null ? _ref4[2 * y + 2 + offset] : void 0, (_ref5 = this.board.vertices[x]) != null ? _ref5[2 * y + 2 + offset] : void 0, (_ref6 = this.board.vertices[x]) != null ? _ref6[2 * y + 1 + offset] : void 0];
     };
     Hex.prototype.getEdges = function() {
-      return this.board.getEdges(this);
+      var offset, x, y, _ref, _ref2, _ref3, _ref4, _ref5, _ref6;
+      x = this.x, y = this.y;
+      offset = x % 2;
+      return [(_ref = this.board.edges[2 * x + 1]) != null ? _ref[2 * y + offset] : void 0, (_ref2 = this.board.edges[2 * x + 2]) != null ? _ref2[2 * y + offset] : void 0, (_ref3 = this.board.edges[2 * x + 2]) != null ? _ref3[2 * y + 1 + offset] : void 0, (_ref4 = this.board.edges[2 * x + 1]) != null ? _ref4[2 * y + 2 + offset] : void 0, (_ref5 = this.board.edges[2 * x]) != null ? _ref5[2 * y + 1 + offset] : void 0, (_ref6 = this.board.edges[2 * x]) != null ? _ref6[2 * y + offset] : void 0];
     };
     return Hex;
   })();
@@ -162,50 +189,15 @@
         return _results;
       }).call(this);
     }
-    HexMap.prototype.getNeighbors = function(hex) {
-      var offset, x, y, _ref, _ref10, _ref11, _ref12, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
-      x = hex.x, y = hex.y;
-      offset = x % 2 === 0 ? +1 : -1;
-      if (x % 2 === 0) {
-        return [(_ref = this.hexes[x]) != null ? _ref[y - 1] : void 0, (_ref2 = this.hexes[x + 1]) != null ? _ref2[y] : void 0, (_ref3 = this.hexes[x + 1]) != null ? _ref3[y + offset] : void 0, (_ref4 = this.hexes[x]) != null ? _ref4[y + 1] : void 0, (_ref5 = this.hexes[x - 1]) != null ? _ref5[y + offset] : void 0, (_ref6 = this.hexes[x - 1]) != null ? _ref6[y] : void 0];
-      } else {
-        return [(_ref7 = this.hexes[x]) != null ? _ref7[y - 1] : void 0, (_ref8 = this.hexes[x + 1]) != null ? _ref8[y + offset] : void 0, (_ref9 = this.hexes[x + 1]) != null ? _ref9[y] : void 0, (_ref10 = this.hexes[x]) != null ? _ref10[y + 1] : void 0, (_ref11 = this.hexes[x - 1]) != null ? _ref11[y] : void 0, (_ref12 = this.hexes[x - 1]) != null ? _ref12[y + offset] : void 0];
-      }
-    };
-    HexMap.prototype.getVertices = function(hex) {
-      var offset, x, y, _ref, _ref2, _ref3, _ref4, _ref5, _ref6;
-      x = hex.x, y = hex.y;
-      offset = x % 2;
-      return [(_ref = this.vertices[x + 1]) != null ? _ref[2 * y + offset] : void 0, (_ref2 = this.vertices[x + 1]) != null ? _ref2[2 * y + 1 + offset] : void 0, (_ref3 = this.vertices[x + 1]) != null ? _ref3[2 * y + 2 + offset] : void 0, (_ref4 = this.vertices[x]) != null ? _ref4[2 * y + 2 + offset] : void 0, (_ref5 = this.vertices[x]) != null ? _ref5[2 * y + 1 + offset] : void 0, (_ref6 = this.vertices[x]) != null ? _ref6[2 * y + offset] : void 0];
-    };
-    HexMap.prototype.getEdges = function(hex) {
-      var offset, x, y, _ref, _ref2, _ref3, _ref4, _ref5, _ref6;
-      x = hex.x, y = hex.y;
-      offset = x % 2;
-      return [(_ref = this.edges[2 * x]) != null ? _ref[2 * y + offset] : void 0, (_ref2 = this.edges[2 * x]) != null ? _ref2[2 * y + 1 + offset] : void 0, (_ref3 = this.edges[2 * x + 1]) != null ? _ref3[2 * y + offset] : void 0, (_ref4 = this.edges[2 * x + 1]) != null ? _ref4[2 * y + 2 + offset] : void 0, (_ref5 = this.edges[2 * x + 2]) != null ? _ref5[2 * y + offset] : void 0, (_ref6 = this.edges[2 * x + 2]) != null ? _ref6[2 * y + 1 + offset] : void 0];
-    };
-    HexMap.prototype.getEnds = function(edge) {
-      var x, y, _ref, _ref2, _ref3, _ref4;
-      x = edge.x, y = edge.y;
-      if (x % 2 === 0) {
-        return [(_ref = this.vertices[x / 2]) != null ? _ref[y] : void 0, (_ref2 = this.vertices[x / 2]) != null ? _ref2[y + 1] : void 0];
-      } else {
-        return [(_ref3 = this.vertices[(x - 1) / 2]) != null ? _ref3[y] : void 0, (_ref4 = this.vertices[(x + 1) / 2]) != null ? _ref4[y] : void 0];
-      }
-    };
-    HexMap.prototype.getEdges = function(vertex) {
-      var x, y, _ref, _ref2, _ref3;
-      x = vertex.x, y = vertex.y;
-      return [(_ref = this.edges[x * 2]) != null ? _ref[y] : void 0, (_ref2 = this.edges[x * 2 + 1]) != null ? _ref2[y] : void 0, (_ref3 = this.edges[x * 2 - 1]) != null ? _ref3[y] : void 0];
-    };
-    HexMap.prototype.getHexes = function(vertex) {
-      var x, xoffset, y, yoffset, _ref, _ref2, _ref3;
-      x = vertex.x, y = vertex.y;
-      xoffset = x % 2;
-      yoffset = y % 2;
-      return [(_ref = this.hexes[x - 1]) != null ? _ref[(y + xoffset) / 2 - 1] : void 0, (_ref2 = this.hexes[x - (1 - yoffset) * xoffset]) != null ? _ref2[(y - 1) / 2] : void 0, (_ref3 = this.hexes[x]) != null ? _ref3[(y - xoffset) / 2] : void 0];
-    };
     return HexMap;
+  })();
+  BoardRoad = (function() {
+    __extends(BoardRoad, Edge);
+    function BoardRoad() {
+      BoardRoad.__super__.constructor.apply(this, arguments);
+    }
+    BoardRoad.prototype.road = 0;
+    return BoardRoad;
   })();
   BoardTile = (function() {
     __extends(BoardTile, Hex);
@@ -216,11 +208,24 @@
     BoardTile.prototype.roll = 0;
     return BoardTile;
   })();
+  BoardHouse = (function() {
+    __extends(BoardHouse, Vertex);
+    function BoardHouse() {
+      BoardHouse.__super__.constructor.apply(this, arguments);
+    }
+    BoardHouse.prototype.house = 0;
+    return BoardHouse;
+  })();
   Board = (function() {
+    var XOFFSET, YOFFSET;
     __extends(Board, HexMap);
     Board.prototype.HexClass = BoardTile;
-    function Board(ctx, width, height) {
+    Board.prototype.EdgeClass = BoardRoad;
+    Board.prototype.VertexClass = BoardHouse;
+    function Board(ctx, cmap, width, height) {
       this.ctx = ctx;
+      this.cmap = cmap;
+      this._renderHex = __bind(this._renderHex, this);
       Board.__super__.constructor.call(this, width, height);
     }
     Board.prototype.newGame = function() {
@@ -263,69 +268,173 @@
       }
       return _results2;
     };
+    XOFFSET = TILERADII * 1.5;
+    YOFFSET = Math.sin(Math.PI / 3) * TILERADII * 2;
+    Board.prototype.renderWidth = function() {
+      return TILERADII * 2 + (this.width - 1) * XOFFSET;
+    };
+    Board.prototype.renderHeight = function() {
+      return this.height * YOFFSET;
+    };
     Board.prototype.render = function() {
-      var XOFFSET, YOFFSET, drawHex, i, j, _ref, _results;
+      var e, i, j, tile, tr, v, _i, _j, _len, _len2, _ref, _ref2, _ref3, _ref4;
+      this.cmap.reset();
       this.ctx.fillStyle = 'cyan';
       this.ctx.fillRect(0, 0, BOARDWIDTH, BOARDHEIGHT);
-      this.ctx.translate(20, 50);
-      XOFFSET = TILERADII * 1.5;
-      YOFFSET = Math.sin(Math.PI / 3) * TILERADII * 2;
-      drawHex = __bind(function(x, y, num) {
-        var i;
-        this.ctx.save();
-        this.ctx.beginPath();
-        this.ctx.translate(x, y);
-        this.ctx.moveTo(TILERADII, 0);
-        for (i = 0; i < 6; i++) {
-          this.ctx.rotate(-(Math.PI * 2) / 6);
-          this.ctx.lineTo(TILERADII, 0);
+      this.ctx.save();
+      tr = new Transform();
+      tr.translate(TILERADII, YOFFSET / 2);
+      tr.translate((BOARDWIDTH - this.renderWidth()) / 2, (BOARDHEIGHT - this.renderHeight()) / 2);
+      for (i = 0, _ref = this.width; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+        for (j = 0, _ref2 = this.height; 0 <= _ref2 ? j < _ref2 : j > _ref2; 0 <= _ref2 ? j++ : j--) {
+          this._renderHex(tr, this.hexes[i][j]);
         }
-        this.ctx.stroke();
+      }
+      _ref3 = this.land;
+      for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
+        tile = _ref3[_i];
+        for (e = 0; e < 6; e++) {
+          this._renderRoad(tr, tile, e);
+        }
+      }
+      _ref4 = this.land;
+      for (_j = 0, _len2 = _ref4.length; _j < _len2; _j++) {
+        tile = _ref4[_j];
+        for (v = 0; v < 6; v++) {
+          this._renderHouse(tr, tile, v);
+        }
+      }
+      return this.ctx.restore();
+    };
+    Board.prototype._renderRoad = function(tr, hex, e) {
+      var edge, tr2, x, x1, x2, y, y1, y2, _ref, _ref2;
+      edge = hex.getEdges()[e];
+      x = hex.x * XOFFSET;
+      y = hex.y * YOFFSET + (hex.x % 2 === 0 ? 0 : YOFFSET / 2);
+      tr2 = tr.clone();
+      tr2.translate(x, y);
+      tr2.rotate(-Math.PI * 2 / 3);
+      tr2.rotate((Math.PI * 2) * e / 6);
+      tr2.translate(TILERADII, 0);
+      tr2.rotate(Math.PI / 6);
+      if (edge.road) {
+        this.ctx.save();
+        tr2.apply(this.ctx);
+        this.ctx.fillStyle = 'black';
+        this.ctx.fillRect(-3, ROADBUFFER, 6, TILERADII - ROADBUFFER * 2);
+        this.ctx.restore();
+      }
+      _ref = tr2.transformPoint(-3 - HITBUFFER, 0), x1 = _ref[0], y1 = _ref[1];
+      _ref2 = tr2.transformPoint(-3 + 6 + HITBUFFER, TILERADII), x2 = _ref2[0], y2 = _ref2[1];
+      return this.cmap.polygon([[x1, y1], [x2, y1], [x2, y2], [x1, y2]], __bind(function() {
+        edge.road = 1;
+        return this.render();
+      }, this));
+    };
+    Board.prototype._renderHouse = function(tr, hex, v) {
+      var tr2, vertex, x, y, _ref;
+      vertex = hex.getVertices()[v];
+      x = hex.x * XOFFSET;
+      y = hex.y * YOFFSET + (hex.x % 2 === 0 ? 0 : YOFFSET / 2);
+      tr2 = tr.clone();
+      tr2.translate(x, y);
+      tr2.rotate(-Math.PI * 2 / 3);
+      tr2.rotate((Math.PI * 2) * v / 6);
+      if (vertex.house) {
+        this.ctx.save();
+        tr2.apply(this.ctx);
+        this.ctx.fillStyle = 'black';
+        this.ctx.beginPath();
+        this.ctx.arc(TILERADII, 0, 5, 0, Math.PI * 2, true);
+        this.ctx.closePath();
         this.ctx.fill();
         this.ctx.restore();
-        if (num) {
-          num = String(num);
-          this.ctx.fillStyle = 'tan';
-          this.ctx.beginPath();
-          this.ctx.arc(x, y, 15, 0, Math.PI * 2, true);
-          this.ctx.closePath();
-          this.ctx.fill();
-          this.ctx.save();
-          this.ctx.fillStyle = num === "6" || num === "8" ? 'red' : 'black';
-          this.ctx.font = "20px Arial";
-          this.ctx.translate(x - this.ctx.measureText(num).width / 2, y + 7);
-          this.ctx.fillText(num, 0, 0);
-          return this.ctx.restore();
-        }
-      }, this);
-      this.ctx.strokeStyle = '1px solid black';
-      _results = [];
-      for (i = 0, _ref = this.width; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-        _results.push((function() {
-          var _ref2, _results2;
-          _results2 = [];
-          for (j = 0, _ref2 = this.height; 0 <= _ref2 ? j < _ref2 : j > _ref2; 0 <= _ref2 ? j++ : j--) {
-            if (this.hexes[i][j].type > NOTHING) {
-              this.ctx.fillStyle = TILECOLORS[this.hexes[i][j].type];
-              _results2.push(drawHex(i * XOFFSET, j * YOFFSET + (i % 2 === 0 ? 0 : YOFFSET / 2), this.hexes[i][j].roll));
-            }
-          }
-          return _results2;
-        }).call(this));
       }
-      return _results;
+      return (_ref = this.cmap).circle.apply(_ref, __slice.call(tr2.transformPoint(TILERADII, 0)).concat([5 + HITBUFFER], [__bind(function() {
+        vertex.house = 1;
+        return this.render();
+      }, this)]));
+    };
+    Board.prototype._renderHex = function(tr, hex) {
+      var color, coords, i, num, tr2, tr3, x, y;
+      if (hex.type === NOTHING) {
+        return;
+      }
+      x = hex.x * XOFFSET;
+      y = hex.y * YOFFSET + (hex.x % 2 === 0 ? 0 : YOFFSET / 2);
+      num = hex.roll;
+      color = TILECOLORS[hex.type];
+      tr2 = tr.clone();
+      tr2.translate(x, y);
+      this.ctx.save();
+      tr2.apply(this.ctx);
+      this.ctx.fillStyle = color;
+      this.ctx.strokeStyle = '1px solid black';
+      this.ctx.beginPath();
+      this.ctx.moveTo(TILERADII, 0);
+      for (i = 0; i < 6; i++) {
+        this.ctx.rotate(-(Math.PI * 2) / 6);
+        this.ctx.lineTo(TILERADII, 0);
+      }
+      this.ctx.stroke();
+      this.ctx.fill();
+      this.ctx.restore();
+      if (num) {
+        num = String(num);
+        this.ctx.save();
+        tr2.apply(this.ctx);
+        this.ctx.fillStyle = 'tan';
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, 15, 0, Math.PI * 2, true);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.fillStyle = num === "6" || num === "8" ? 'red' : 'black';
+        this.ctx.font = "20px Arial";
+        this.ctx.translate(-this.ctx.measureText(num).width / 2, 7);
+        this.ctx.fillText(num, 0, 0);
+        this.ctx.restore();
+      }
+      tr3 = tr2.clone();
+      coords = [];
+      for (i = 0; i < 6; i++) {
+        tr3.rotate(-(Math.PI * 2) / 6);
+        coords.push(tr3.transformPoint(TILERADII, 0));
+      }
+      return this.cmap.polygon(coords, function() {
+        return console.log(hex, hex.x, hex.y);
+      });
     };
     return Board;
   })();
+  ClickMap = (function() {
+    function ClickMap(elem) {
+      this.elem = elem;
+    }
+    ClickMap.prototype.reset = function() {
+      return $(this.elem).html('');
+    };
+    ClickMap.prototype.circle = function(x, y, r, cb) {
+      return $(this.elem).prepend('<area shape="circle" coords="' + [x, y, r] + '">').children(':first').click(cb);
+    };
+    ClickMap.prototype.rect = function(x, y, w, h, cb) {
+      return $(this.elem).prepend('<area shape="rect" coords="' + [x, y, x + w, y + h] + '">').children(':first').click(cb);
+    };
+    ClickMap.prototype.polygon = function(coords, cb) {
+      return $(this.elem).prepend('<area shape="polygon" coords="' + coords + '">').children(':first').click(cb);
+    };
+    return ClickMap;
+  })();
   $(function() {
-    var board, ctx;
-    ctx = $('#board')[0].getContext('2d');
-    $('#board').attr({
+    var board, cmap, ctx;
+    ctx = $('#board-canvas')[0].getContext('2d');
+    $('#board-canvas').attr({
       width: BOARDWIDTH,
       height: BOARDHEIGHT
     });
-    board = new Board(ctx, 9, 7);
+    cmap = new ClickMap($('#board-collision-map')[0]);
+    board = new Board(ctx, cmap, 9, 7);
     board.newGame();
+    board.hexes[4][2].getEdges()[2].road = 1;
     return board.render();
   });
 }).call(this);

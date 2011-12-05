@@ -8,8 +8,10 @@ Array.prototype.shuffle = -> this.sort -> 0.5 - Math.random()
 
 # Drawing constants.
 
-BOARDWIDTH = BOARDHEIGHT = 500
+BOARDWIDTH = BOARDHEIGHT = 520
 TILERADII = 40
+ROADBUFFER = 8
+HITBUFFER = 3
 
 # Tile constants.
 
@@ -77,18 +79,89 @@ In a 2D Matrix:
 
 class Edge
 	constructor: (@board, @x, @y) ->
-	getEnds: -> @board.getEnds this
+
+	getEnds: ->
+		{x, y} = this
+		return if x % 2 == 0
+			[
+				@board.vertices[x/2]?[y]
+				@board.vertices[x/2]?[y+1]
+			]
+		else
+			[
+				@board.vertices[(x-1)/2]?[y]
+				@board.vertices[(x+1)/2]?[y]
+			]
 
 class Vertex
 	constructor: (@board, @x, @y) ->
-	getEdges: -> @board.getEdges this
-	getHexes: -> @board.getHexes this
+
+	getEdges: ->
+		{x, y} = this
+		return [
+			@board.edges[x*2]?[y]
+			@board.edges[x*2+1]?[y]
+			@board.edges[x*2-1]?[y]
+		]
+	
+	getHexes: ->
+		{x, y} = this
+		xoffset = x % 2
+		yoffset = y % 2
+		return [
+			@board.hexes[x-1]?[(y+xoffset)/2-1]
+			@board.hexes[x-(1-yoffset)*xoffset]?[(y-1)/2]
+			@board.hexes[x]?[(y-xoffset)/2]
+		]
 
 class Hex
 	constructor: (@board, @x, @y) ->
-	getNeighbors: -> @board.getNeighbors this
-	getVertices: -> @board.getVertices this
-	getEdges: -> @board.getEdges this
+	
+	getNeighbors: ->
+		{x, y} = this
+		offset = if x % 2 == 0 then +1 else -1
+		return if x % 2 == 0
+			[
+				@board.hexes[x]?[y-1]
+				@board.hexes[x+1]?[y]
+				@board.hexes[x+1]?[y+offset]
+				@board.hexes[x]?[y+1]
+				@board.hexes[x-1]?[y+offset]
+				@board.hexes[x-1]?[y]
+			]
+		else
+			[
+				@board.hexes[x]?[y-1]
+				@board.hexes[x+1]?[y+offset]
+				@board.hexes[x+1]?[y]
+				@board.hexes[x]?[y+1]
+				@board.hexes[x-1]?[y]
+				@board.hexes[x-1]?[y+offset]
+			]
+	
+	getVertices: ->
+		{x, y} = this
+		offset = x % 2
+		return [
+			@board.vertices[x]?[2*y+offset]
+			@board.vertices[x+1]?[2*y+offset]
+			@board.vertices[x+1]?[2*y+1+offset]
+			@board.vertices[x+1]?[2*y+2+offset]
+			@board.vertices[x]?[2*y+2+offset]
+			@board.vertices[x]?[2*y+1+offset]
+		]
+
+	getEdges: ->
+		{x, y} = this
+		offset = x % 2
+		return [
+			@board.edges[2*x+1]?[2*y+offset]
+			@board.edges[2*x+2]?[2*y+offset]
+			@board.edges[2*x+2]?[2*y+1+offset]
+			@board.edges[2*x+1]?[2*y+2+offset]
+			@board.edges[2*x]?[2*y+1+offset]
+			@board.edges[2*x]?[2*y+offset]
+		]
 
 class HexMap
 	HexClass: Hex
@@ -106,96 +179,26 @@ class HexMap
 		@vertices = for i in [0...(width+1)*2]
 			for j in [0...(height+1)*2]
 				new @VertexClass this, i, j
-	
-	getNeighbors: (hex) ->
-		{x, y} = hex
-		offset = if x % 2 == 0 then +1 else -1
-		return if x % 2 == 0
-			[
-				@hexes[x]?[y-1]
-				@hexes[x+1]?[y]
-				@hexes[x+1]?[y+offset]
-				@hexes[x]?[y+1]
-				@hexes[x-1]?[y+offset]
-				@hexes[x-1]?[y]
-			]
-		else
-			[
-				@hexes[x]?[y-1]
-				@hexes[x+1]?[y+offset]
-				@hexes[x+1]?[y]
-				@hexes[x]?[y+1]
-				@hexes[x-1]?[y]
-				@hexes[x-1]?[y+offset]
-			]
-	
-	getVertices: (hex) ->
-		{x, y} = hex
-		offset = x % 2
-		return [
-			@vertices[x+1]?[2*y+offset]
-			@vertices[x+1]?[2*y+1+offset]
-			@vertices[x+1]?[2*y+2+offset]
-			@vertices[x]?[2*y+2+offset]
-			@vertices[x]?[2*y+1+offset]
-			@vertices[x]?[2*y+offset]
-		]
-
-	getEdges: (hex) ->
-		{x, y} = hex
-		offset = x % 2
-		return [
-			@edges[2*x]?[2*y+offset]
-			@edges[2*x]?[2*y+1+offset]
-			@edges[2*x+1]?[2*y+offset]
-			@edges[2*x+1]?[2*y+2+offset]
-			@edges[2*x+2]?[2*y+offset]
-			@edges[2*x+2]?[2*y+1+offset]
-		]
-
-	getEnds: (edge) ->
-		{x, y} = edge
-
-		return if x % 2 == 0
-			[
-				@vertices[x/2]?[y]
-				@vertices[x/2]?[y+1]
-			]
-		else
-			[
-				@vertices[(x-1)/2]?[y]
-				@vertices[(x+1)/2]?[y]
-			]
-	
-	getEdges: (vertex) ->
-		{x, y} = vertex
-		return [
-			@edges[x*2]?[y]
-			@edges[x*2+1]?[y]
-			@edges[x*2-1]?[y]
-		]
-	
-	getHexes: (vertex) ->
-		{x, y} = vertex
-		xoffset = x % 2
-		yoffset = y % 2
-		return [
-			@hexes[x-1]?[(y+xoffset)/2-1]
-			@hexes[x-(1-yoffset)*xoffset]?[(y-1)/2]
-			@hexes[x]?[(y-xoffset)/2]
-		]
 
 # Game Board
 # ----------
+
+class BoardRoad extends Edge
+	road: 0
 
 class BoardTile extends Hex
 	type: NOTHING
 	roll: 0
 
+class BoardHouse extends Vertex
+	house: 0
+
 class Board extends HexMap
 	HexClass: BoardTile
+	EdgeClass: BoardRoad
+	VertexClass: BoardHouse
 
-	constructor: (@ctx, width, height) ->
+	constructor: (@ctx, @cmap, width, height) ->
 		super width, height
 	
 	newGame: ->
@@ -225,66 +228,188 @@ class Board extends HexMap
 			tile.type = tileset.pop()
 			if tile.type > DESERT
 				tile.roll = rolls.pop()
-		
 	
-	render: ->
-		# Background.
+	# Tile drawing constants.		
+	XOFFSET = TILERADII*1.5
+	YOFFSET = Math.sin(Math.PI/3)*TILERADII*2
 
+	renderWidth: -> TILERADII*2 + (@width-1)*XOFFSET
+	renderHeight: -> @height*YOFFSET
+		
+	render: ->
+		# Reset hit map.
+		@cmap.reset()
+		# Reset canvas.
 		@ctx.fillStyle = 'cyan'
 		@ctx.fillRect 0, 0, BOARDWIDTH, BOARDHEIGHT
 		
-		# Center board.
-
-		#ctx.translate BOARDWIDTH/2, BOARDHEIGHT/2
-		@ctx.translate 20, 50
-
+		@ctx.save()
+		tr = new Transform()
+		# Half-tile offsets.
+		tr.translate TILERADII, YOFFSET/2
+		# Center tiles.
+		tr.translate (BOARDWIDTH - @renderWidth())/2, (BOARDHEIGHT - @renderHeight())/2
 		# Draw tiles.
+		for i in [0...@width]
+			for j in [0...@height]
+				@_renderHex tr, @hexes[i][j]
+		for tile in @land
+			for e in [0...6]
+				@_renderRoad tr, tile, e
+		for tile in @land
+			for v in [0...6]
+				@_renderHouse tr, tile, v
+		# Done.
+		@ctx.restore()
+	
+	_renderRoad: (tr, hex, e) ->
+		edge = hex.getEdges()[e]
 
-		XOFFSET = TILERADII*1.5
-		YOFFSET = Math.sin(Math.PI/3)*TILERADII*2
+		x = hex.x*XOFFSET
+		y = hex.y*YOFFSET + (if hex.x % 2 == 0 then 0 else YOFFSET/2)
 
-		drawHex = (x, y, num) =>
+		# transforms
+		tr2 = tr.clone()
+		tr2.translate x, y
+		tr2.rotate -Math.PI*2/3
+		tr2.rotate (Math.PI*2)*e/6
+		tr2.translate TILERADII, 0
+		tr2.rotate Math.PI/6
+
+		# Draw road.
+		if edge.road
 			@ctx.save()
+			tr2.apply @ctx
+			@ctx.fillStyle = 'black'
+			@ctx.fillRect -3, ROADBUFFER, 6, TILERADII - ROADBUFFER*2
+			@ctx.restore()
+
+		# Rectangle hit map.
+		[x1, y1] = tr2.transformPoint -3 - HITBUFFER, 0
+		[x2, y2] = tr2.transformPoint -3 + 6 + HITBUFFER, TILERADII
+		@cmap.polygon [[x1, y1], [x2, y1], [x2, y2], [x1, y2]], =>
+			edge.road = 1
+			@render()
+	
+	_renderHouse: (tr, hex, v) ->
+		vertex = hex.getVertices()[v]
+
+		x = hex.x*XOFFSET
+		y = hex.y*YOFFSET + (if hex.x % 2 == 0 then 0 else YOFFSET/2)
+
+		# transforms
+		tr2 = tr.clone()
+		tr2.translate x, y
+		tr2.rotate -Math.PI*2/3
+		tr2.rotate (Math.PI*2)*v/6
+
+		# Draw house.
+		if vertex.house
+			@ctx.save()
+			tr2.apply @ctx
+			@ctx.fillStyle = 'black'
 			@ctx.beginPath()
-			@ctx.translate x, y
-			@ctx.moveTo TILERADII, 0
-			for i in [0...6]
-				@ctx.rotate -(Math.PI*2)/6
-				@ctx.lineTo TILERADII, 0
-			@ctx.stroke()
+			@ctx.arc TILERADII, 0, 5, 0, Math.PI*2, true
+			@ctx.closePath()
 			@ctx.fill()
 			@ctx.restore()
 
-			if num
-				num = String(num)
+		# Circular hit map.
+		@cmap.circle (tr2.transformPoint TILERADII, 0)..., 5+HITBUFFER, =>
+			vertex.house = 1
+			@render()
+	
+	_renderHex: (tr, hex) =>
+		# Get hex
+		return if hex.type == NOTHING
 
-				@ctx.fillStyle = 'tan'
-				@ctx.beginPath();
-				@ctx.arc x, y, 15, 0, Math.PI*2, true
-				@ctx.closePath();
-				@ctx.fill();
+		# Get hex constants, center of hex coords.
+		x = hex.x*XOFFSET
+		y = hex.y*YOFFSET + (if hex.x % 2 == 0 then 0 else YOFFSET/2)
+		num = hex.roll
+		color = TILECOLORS[hex.type]
 
-				@ctx.save()
-				@ctx.fillStyle = if num in ["6", "8"] then 'red' else 'black' 
-				@ctx.font = "20px Arial"
-				@ctx.translate x - @ctx.measureText(num).width/2, y + 7
-				@ctx.fillText num, 0, 0
-				@ctx.restore()
+		# Move to tile origin.
+		tr2 = tr.clone()
+		tr2.translate x, y
 
+		# Draw hex.
+		@ctx.save()
+		tr2.apply @ctx
+		@ctx.fillStyle = color
 		@ctx.strokeStyle = '1px solid black'
-		for i in [0...@width]
-			for j in [0...@height] when @hexes[i][j].type > NOTHING
-				@ctx.fillStyle = TILECOLORS[@hexes[i][j].type]
-				drawHex i*XOFFSET, j*YOFFSET + (if i % 2 == 0 then 0 else YOFFSET/2), @hexes[i][j].roll
+		@ctx.beginPath()
+		@ctx.moveTo TILERADII, 0
+		for i in [0...6]
+			@ctx.rotate -(Math.PI*2)/6
+			@ctx.lineTo TILERADII, 0
+		@ctx.stroke()
+		@ctx.fill()
+		@ctx.restore()
+
+		# Draw roll indicator
+		if num
+			num = String(num)
+
+			@ctx.save()
+			tr2.apply @ctx
+
+			@ctx.fillStyle = 'tan'
+			@ctx.beginPath();
+			@ctx.arc 0, 0, 15, 0, Math.PI*2, true
+			@ctx.closePath();
+			@ctx.fill();
+
+			@ctx.fillStyle = if num in ["6", "8"] then 'red' else 'black' 
+			@ctx.font = "20px Arial"
+			@ctx.translate -@ctx.measureText(num).width/2, 7
+			@ctx.fillText num, 0, 0
+			@ctx.restore()
+
+		# Hexagon hit map.
+		tr3 = tr2.clone()
+		coords = []
+		for i in [0...6]
+			tr3.rotate -(Math.PI*2)/6
+			coords.push tr3.transformPoint TILERADII, 0
+		@cmap.polygon coords, ->
+			console.log hex, hex.x, hex.y
+
+# Click Map
+# ---------
+
+class ClickMap
+	constructor: (@elem) ->
+
+	reset: -> $(@elem).html('')
+
+	circle: (x, y, r, cb) ->
+		$(@elem)
+			.prepend('<area shape="circle" coords="' + [x,y,r] + '">')
+			.children(':first').click cb
+	rect: (x, y, w, h, cb) ->
+		$(@elem)
+			.prepend('<area shape="rect" coords="' + [x,y,x+w,y+h] + '">')
+			.children(':first').click cb
+	polygon: (coords, cb) ->
+		$(@elem)
+			.prepend('<area shape="polygon" coords="' + coords + '">')
+			.children(':first').click cb
 
 # Initialize
 # ----------
 
 $ ->
-	ctx = $('#board')[0].getContext '2d'
-	$('#board').attr width: BOARDWIDTH, height: BOARDHEIGHT
+	ctx = $('#board-canvas')[0].getContext '2d'
+	$('#board-canvas').attr width: BOARDWIDTH, height: BOARDHEIGHT
+
+	cmap = new ClickMap $('#board-collision-map')[0]
 
 	# Create board.
-	board = new Board ctx, 9, 7
+	board = new Board ctx, cmap, 9, 7
 	board.newGame()
+
+	board.hexes[4][2].getEdges()[2].road = 1
+
 	board.render()
+		

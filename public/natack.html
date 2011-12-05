@@ -4,10 +4,28 @@
 <head>
 <title>Natack, Catan in HTML5</title>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+<script src="transform.js"></script>
 <script src="natack.js"></script>
+<style>
+#board { position: relative; width: 520px; height: 520px; }
+#board img { z-index: 100; position: absolute; left: 0; top: 0;}
+</style>
 </head>
 <body>
-<h1>Natick</h1>
-<canvas id="board" style="border: 2px solid black"></canvas>
+
+<map name="board-collision-map" id="board-collision-map">
+</map>
+
+
+<div id="board" style="border: 2px solid black">
+
+<img src="data:image/gif;base64,R0lGODlhAQABAPAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+id="board-collision"
+   width=500 height=500
+   usemap="#board-collision-map">
+
+<canvas id="board-canvas"></canvas>
+</div>
+<h1>Natack</h1>
 </body>
 </html>
