@@ -1,3 +1,5 @@
+# Tile constants.
+
 NOTHING = 0
 WATER = 1
 DESERT = 2
@@ -16,6 +18,8 @@ colors =
 	5: 'lightgray'
 	6: 'darkgreen'
 	7: 'gold'
+
+# Mapping of visible tiles to water/playable tiles.
 
 evenBoard = [
  [0, 1, 1, 0]
@@ -36,6 +40,8 @@ oddBoard = [
  [0, 1, 0]
 ]
 
+# Playable tiles, roll #'s, and houses
+
 evenPlay = []; evenRoll = []
 oddPlay = []; oddRoll = []
 
@@ -53,16 +59,17 @@ houses = [
  [0, 0, 0, 0, 0, 0]
 ]
 
+# Constants. Manually doing hexagon numbers cause fuck math
+
 BOARDWIDTH = BOARDHEIGHT = 500
+YOFFSET = HEIGHT = 68
+XOFFSET = 60
+RADII = 40
+WIDTH = RADII*2
 
 $ ->
 	ctx = $('#board')[0].getContext '2d'
 	$('#board').attr width: BOARDWIDTH, height: BOARDHEIGHT
-
-	YOFFSET = HEIGHT = 68
-	XOFFSET = 60
-	RADII = 40
-	WIDTH = RADII*2
 
 	drawHex = (x, y, num) ->
 		ctx.save()
@@ -110,7 +117,7 @@ $ ->
 			drawHex XOFFSET*2*j, YOFFSET*i
 	ctx.restore()
 
-	# Randomize even/odd boards
+	# Randomize playable tiles and roll #'s
 
 	tiles = [
 		PLAIN, PLAIN, PLAIN, PLAIN
@@ -122,6 +129,8 @@ $ ->
 	].sort -> 0.5 - Math.random()
 
 	rolls = [11, 12, 9, 4, 6, 5, 10, 3, 11, 4, 8, 8, 10, 9, 3, 5, 2, 6].sort -> 0.5 - Math.random()
+
+	# Distribute random #'s
 
 	evenPlay = for i in [0...4]
 		for j in [0...2]
@@ -136,10 +145,6 @@ $ ->
 	oddRoll = for i in [0...5]
 		for j in [0...3]
 			if oddPlay[i][j] > DESERT then rolls.pop() else 0
-	
-	console.log JSON.stringify evenRoll
-	console.log JSON.stringify oddRoll
-	console.log JSON.stringify rolls
 
 	# Draw Playable tiles.
 
