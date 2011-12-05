@@ -285,6 +285,11 @@
         this.ctx.restore();
         if (num) {
           num = String(num);
+          this.ctx.fillStyle = 'tan';
+          this.ctx.beginPath();
+          this.ctx.arc(x, y, 15, 0, Math.PI * 2, true);
+          this.ctx.closePath();
+          this.ctx.fill();
           this.ctx.save();
           this.ctx.fillStyle = num === "6" || num === "8" ? 'red' : 'black';
           this.ctx.font = "20px Arial";

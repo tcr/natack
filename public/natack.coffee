@@ -257,6 +257,13 @@ class Board extends HexMap
 
 			if num
 				num = String(num)
+
+				@ctx.fillStyle = 'tan'
+				@ctx.beginPath();
+				@ctx.arc x, y, 15, 0, Math.PI*2, true
+				@ctx.closePath();
+				@ctx.fill();
+
 				@ctx.save()
 				@ctx.fillStyle = if num in ["6", "8"] then 'red' else 'black' 
 				@ctx.font = "20px Arial"
